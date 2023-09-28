@@ -9,14 +9,15 @@ def test_parse_datetime():
 
 
 def test_load_data_from_files():
-    data = load_data_from_files("./data/location_history/semantic/2023_sample/")
+    data = load_data_from_files("/Users/davidrose/git/chatlas/data/location_history/semantic/2023")
     assert type(data) == list
     assert len(data) > 0
 
 
 def test_process_data():
-    sample_data = [{"timelineObjects": [{"activitySegment": {...}, "placeVisit": {...}}]}]  # fill in sample objects
-    df = process_data(sample_data)
+    # sample_data = [{"timelineObjects": [{"activitySegment": {...}, "placeVisit": {...}}]}]
+    data = load_data_from_files("/Users/davidrose/git/chatlas/data/location_history/semantic/2023")
+    df = process_data(data)
     assert "interval_start" in df.columns
 
 
