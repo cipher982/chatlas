@@ -1,34 +1,40 @@
-import datetime
+from datetime import datetime
+from pathlib import Path
 import json
-import os
 import logging
 import pandas as pd
 
-# Set up logging
+
+# Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Constants
-SEMANTIC_DIR = "./data/location_history/semantic/2023"
-PROCESSED_DIR = "./data/processed"
-OUTPUT_FILE = os.path.join(PROCESSED_DIR, "semantic.pkl")
+SEMANTIC_DIR = Path("./data/location_history/semantic/2023")
+PROCESSED_DIR = Path("./data/processed")
 
 
-def parse_datetime(dt_str: str) -> datetime.datetime:
-    try:
-        return datetime.datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%S.%fZ")
-    except ValueError:
-        return datetime.datetime.strptime(dt_str, "%Y-%m-%dT%H:%M:%SZ")
+def parse_datetime(dt_str: str) -> datetime:
+    """Parse datetime strings into datetime objects."""
+    formats = ["%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ"]
+    for fmt in formats:
+        try:
+            return datetime.strptime(dt_str, fmt)
+        except ValueError:
+            continue
+    raise ValueError(f"Unknown datetime format: {dt_str}")
 
 
-def load_data_from_files(directory: str) -> list:
+def load_data_from_files(directory: Path) -> list:
+    """Load JSON files from a directory."""
     logging.info("Loading data from files...")
-    data_files = [os.path.join(directory, file) for file in os.listdir(directory) if file.endswith(".json")]
+    data_files = [file for file in directory.glob("*.json")]
     data = []
 
     for file in data_files:
-        with open(file, "r") as f:
+        with file.open("r") as f:
             data.append(json.load(f))
 
+    logging.info(f"Loaded {len(data)} files from {directory}")
     return data
 
 
@@ -40,6 +46,7 @@ def process_data(data: list) -> pd.DataFrame:
     df_acts = pd.json_normalize(activity_segments)
     df_acts["duration.startTimestamp"] = df_acts["duration.startTimestamp"].apply(parse_datetime)
     df_acts["duration.endTimestamp"] = df_acts["duration.endTimestamp"].apply(parse_datetime)
+    logging.info(f"Number of activity segments: {len(df_acts)}")
 
     new_rows = []
     for _, row in df_acts.iterrows():
@@ -63,6 +70,9 @@ def process_data(data: list) -> pd.DataFrame:
     date_range = pd.date_range(start_date, end_date, freq="5T")
     all_intervals_df = pd.DataFrame(index=date_range)
     all_intervals_df = all_intervals_df.reset_index().rename(columns={"index": "interval_start"})
+    logging.info(f"Number of 5-minute intervals: {len(all_intervals_df)}")
+    logging.info(f"Minimum date: {start_date}")
+    logging.info(f"Maximum date: {end_date}")
 
     # Merge
     merged_df = pd.merge_asof(
@@ -73,21 +83,26 @@ def process_data(data: list) -> pd.DataFrame:
         direction="backward",
         suffixes=("", "_y"),
     )
+    logging.info(f"Final processed dataframe shape: {merged_df.shape}")
 
     return merged_df
 
 
-def save_data(df: pd.DataFrame, filepath: str) -> None:
+def save_data(df: pd.DataFrame, filepath: Path) -> None:
+    """Save DataFrame to a pickle file."""
     logging.info("Saving processed data...")
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    df.to_pickle(filepath)
+    filepath.mkdir(parents=True, exist_ok=True)
+    output_file = filepath / "semantic.pkl"
+    df.to_pickle(output_file)
+    logging.info(f"Saved DataFrame of shape {df.shape} to: {output_file}")
 
 
-def main():
+def main() -> None:
+    """Main function to load, process, and save data."""
     logging.info("Starting data processing...")
     data = load_data_from_files(SEMANTIC_DIR)
     processed_df = process_data(data)
-    save_data(processed_df, OUTPUT_FILE)
+    save_data(processed_df, PROCESSED_DIR)
     logging.info("Data processing complete!")
 
 
