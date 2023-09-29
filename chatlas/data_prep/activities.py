@@ -8,10 +8,6 @@ import pandas as pd
 # Logging configuration
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-# Constants
-SEMANTIC_DIR = Path("./data/location_history/semantic/2023")
-PROCESSED_DIR = Path("./data/processed")
-
 
 def parse_datetime(dt_str: str) -> datetime:
     """Parse datetime strings into datetime objects."""
@@ -88,23 +84,10 @@ def process_data(data: list) -> pd.DataFrame:
     return merged_df
 
 
-def save_data(df: pd.DataFrame, filepath: Path) -> None:
+def save_data(df: pd.DataFrame, output_dir: Path) -> None:
     """Save DataFrame to a pickle file."""
     logging.info("Saving processed data...")
-    filepath.mkdir(parents=True, exist_ok=True)
-    output_file = filepath / "semantic.pkl"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = output_dir / "semantic.pkl"
     df.to_pickle(output_file)
     logging.info(f"Saved DataFrame of shape {df.shape} to: {output_file}")
-
-
-def main() -> None:
-    """Main function to load, process, and save data."""
-    logging.info("Starting data processing...")
-    data = load_data_from_files(SEMANTIC_DIR)
-    processed_df = process_data(data)
-    save_data(processed_df, PROCESSED_DIR)
-    logging.info("Data processing complete!")
-
-
-if __name__ == "__main__":
-    main()
