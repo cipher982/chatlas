@@ -83,7 +83,7 @@ def save_data(df: pd.DataFrame, output_file: Path) -> None:
     logging.info(f"Saved DataFrame of shape {df.shape} to: {output_file}")
 
 
-if __name__ == "__main__":
+def main():
     # Load raw data and convert to DataFrame
     df = load_data(DEFAULT_RECORDS_PATH)
 
@@ -92,3 +92,7 @@ if __name__ == "__main__":
 
     # Save the preprocessed data
     save_data(df_processed, DEFAULT_OUTPUT_PATH)
+
+
+if __name__ == "__main__":
+    main()
