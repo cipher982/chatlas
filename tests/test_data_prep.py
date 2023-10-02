@@ -1,6 +1,9 @@
 import os
+
 import pandas as pd
-from chatlas.data_prep.activities import parse_datetime, load_data_from_files, process_data, save_data
+
+from chatlas.data_prep.activities import (load_data_from_files, parse_datetime,
+                                          process_data, save_data)
 
 
 def test_parse_datetime():
