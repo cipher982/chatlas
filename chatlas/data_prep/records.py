@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Union
+import random
 
 import pandas as pd
 
@@ -9,17 +10,21 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Constants
-DEFAULT_RECORDS_PATH = Path(".../data/sample/location_history/Records.json")
-DEFAULT_OUTPUT_PATH = Path(".../data/sample/processed/records.pkl")
+DEFAULT_RECORDS_PATH = Path("./data/sample/location_history/Records.json")
+DEFAULT_OUTPUT_PATH = Path("./data/sample/processed/records.pkl")
 
 
-def load_data(file_path: Path) -> pd.DataFrame:
+def load_data(file_path: Path, n: Optional[int] = None) -> pd.DataFrame:
     """
     Load data from a JSON file and normalize it to a DataFrame.
     """
     logging.info(f"Loading data from {file_path}...")
     with file_path.open("r") as f:
         raw_data = json.load(f)
+
+    # Sample a portion of the data if n is specified
+    if n is not None:
+        raw_data["locations"] = random.sample(raw_data["locations"], min(n, len(raw_data["locations"])))
 
     df = pd.json_normalize(raw_data["locations"])
     logging.info("Data loaded and normalized successfully.")
@@ -33,7 +38,7 @@ def preprocess_data(df: pd.DataFrame, sample_n: Optional[int] = None) -> pd.Data
     logging.info("Preprocessing data...")
 
     # Convert timestamp to datetime format
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], format="ISO8601")
 
     if sample_n:
         df = df.sample(sample_n)
