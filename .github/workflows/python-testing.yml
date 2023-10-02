@@ -38,4 +38,6 @@ jobs:
           pip install -e .
 
       - name: Run Pytest
-        run: pytest ./tests/
+        run: |
+          du -h ./data/sample/
+          pytest ./tests/
