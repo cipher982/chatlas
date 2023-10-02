@@ -10,7 +10,8 @@ setup(
         "pandas",
         "numpy",
         "langchain",
-        # "dotenv",
         "datetime",
+        "openai",
+        "tabulate",
     ],
 )
