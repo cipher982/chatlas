@@ -23,6 +23,7 @@ jobs:
       - name: Clone Private Repository
         run: |
           git clone https://x-access-token:${{ secrets.LFS_REPO_ACCESS_TOKEN }}@github.com/cipher982/chatlas_data.git
+          mkdir -p ./data/sample/
           mv ./chatlas_data/sample/ ./data/sample/
 
       - name: Setup Python
