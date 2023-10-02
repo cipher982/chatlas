@@ -1,24 +1,13 @@
-from langchain.agents import create_pandas_dataframe_agent
-import pandas as pd
-from langchain.llms import OpenAI
-
-
-from chatlas.data_prep import semantic, records
-
-
 import os
-import utils
+
+import pandas as pd
 import streamlit as st
+import utils
+from langchain.agents import create_pandas_dataframe_agent
+from langchain.chat_models import ChatOpenAI
 from streaming import StreamHandler
 
-from langchain.chat_models import ChatOpenAI
-
-# from langchain.document_loaders import PyPDFLoader
-# from langchain.memory import ConversationBufferMemory
-# from langchain.embeddings import HuggingFaceEmbeddings
-# from langchain.chains import ConversationalRetrievalChain
-# from langchain.vectorstores import DocArrayInMemorySearch
-# from langchain.text_splitter import RecursiveCharacterTextSplitter
+from chatlas.data_prep import records, semantic
 
 st.set_page_config(page_title="Chatlas", page_icon="🌎")
 st.header("Chat over your location history")
