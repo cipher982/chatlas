@@ -39,11 +39,12 @@ def test_process_data(processed_data):
     assert processed_data["interval_start"].dtype == "datetime64[ns]"
 
 
-def test_save_data():
-    # Using TemporaryDirectory to handle file creation/deletion within tests
-    with TemporaryDirectory() as tmpdirname:
-        temp_path = Path(tmpdirname)
-        df = pd.DataFrame({"col1": [1, 2, 3], "col2": [4, 5, 6]})
-        save_data(df, temp_path)
-        file_path = temp_path / "semantic.pkl"
-        assert file_path.exists()
+def test_save_data(tmp_path):
+    """Test the save_data function."""
+    df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+    output_file = tmp_path / "output.pkl"
+    save_data(df, output_file)
+    assert output_file.exists()
+
+    loaded_df = pd.read_pickle(output_file)
+    pd.testing.assert_frame_equal(df, loaded_df)
