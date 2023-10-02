@@ -4,7 +4,7 @@ from tempfile import TemporaryDirectory
 import pandas as pd
 import pytest
 
-from chatlas.data_prep.activities import load_data_from_files, parse_datetime, process_data, save_data
+from chatlas.data_prep.semantic import load_data_from_files, parse_datetime, process_data, save_data
 
 # Constants at the top of the file
 SAMPLE_DATA_PATH = Path("./data/sample/location_history/semantic/2023")
