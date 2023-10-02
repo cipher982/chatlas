@@ -39,5 +39,5 @@ jobs:
 
       - name: Run Pytest
         run: |
-          ls ./data/sample/location_history/
+          ls ./data/sample/
           pytest ./tests/
