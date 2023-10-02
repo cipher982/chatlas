@@ -24,7 +24,7 @@ jobs:
         run: |
           git clone https://x-access-token:${{ secrets.LFS_REPO_ACCESS_TOKEN }}@github.com/cipher982/chatlas_data.git
           mkdir -p ./data/sample/
-          mv ./chatlas_data/sample/ ./data/sample/
+          mv ./chatlas_data/sample/ ./data/
 
       - name: Setup Python
         uses: actions/setup-python@v2
