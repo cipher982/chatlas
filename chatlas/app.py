@@ -2,22 +2,23 @@ import os
 
 import pandas as pd
 import streamlit as st
-import utils
-from langchain.agents import create_pandas_dataframe_agent
 from langchain.chat_models import ChatOpenAI
 from streaming import StreamHandler
 
+from chatlas import utils
+from chatlas.agent.chatlas_df import create_chatlas
 from chatlas.data_prep import records, semantic
+
 
 st.set_page_config(page_title="Chatlas", page_icon="🌎")
 st.header("Chat over your location history")
 st.write("This app uses langchain and AI to answer questions on your location history.")
 st.write(
-    "[![view source code ](https://img.shields.io/badge/view_source_code-gray?logo=github)](https://github.com/cipher982/chatlas)"
+    "[![view source code ](https://img.shields.io/badge/view_source_code-gray?logo=github)](https://github.com/cipher982/chatlas)"  # noqa
 )
 
 
-class ChatlasBot:
+class StreamlitApp:
     def __init__(self):
         utils.configure_openai_api_key()
         self.openai_model = "gpt-3.5-turbo"
@@ -32,53 +33,48 @@ class ChatlasBot:
             f.write(file.getvalue())
         return file_path
 
-    @st.spinner("Loading your data...")
-    def setup_qa_chain(self):
-        # Check if processed data has been generated
+    @st.spinner("Processing your data...")
+    def process_data(self):
+        # Check if processed semantic/activities data has been generated
         if not semantic.DEFAULT_OUTPUT_PATH.exists():
-            # Generate processed data
+            placeholder = st.empty()
+            placeholder.text("Generating processed data for semantic...")
             semantic.main()
+            placeholder.empty()
 
-        # Check if processed data has been generated for records
+        # Check if processed granular records data has been generated
         if not records.DEFAULT_OUTPUT_PATH.exists():
-            # Generate processed data
+            placeholder = st.empty()
+            placeholder.text("Generating processed data for records...")
             records.main()
+            placeholder.empty()
 
-        # Load processed data
+    @st.spinner("Connecting to AI...")
+    def setup_agent(self):
+        # Load processed location history data
         df = pd.read_pickle(semantic.DEFAULT_OUTPUT_PATH)
 
-        # Create langchain agent
-        llm = ChatOpenAI(model=self.openai_model, temperature=0, streaming=True)
-
-        agent = create_pandas_dataframe_agent(llm=llm, df=df, verbose=True)
-
-        # # Setup memory for contextual conversation
-        # memory = ConversationBufferMemory(
-        #     memory_key='chat_history',
-        #     return_messages=True
-        # )
-
-        # Setup LLM and QA chain
-        # llm = ChatOpenAI(model_name=self.openai_model, temperature=0, streaming=True)
-        # qa_chain = ConversationalRetrievalChain.from_llm(llm, retriever=retriever, memory=memory, verbose=True)
+        # Create llm and agent
+        llm = ChatOpenAI(client=None, model=self.openai_model, temperature=0, streaming=True)
+        agent = create_chatlas(llm=llm, df=df)
 
         return agent
 
     @utils.enable_chat_history
     def main(self):
-        user_query = st.chat_input(placeholder="Ask me anything!")
+        user_query = st.chat_input(placeholder="Ask me about your travel history!")
 
         if user_query:
-            qa_chain = self.setup_qa_chain()
+            agent = self.setup_agent()
 
             utils.display_msg(user_query, "user")
 
             with st.chat_message("assistant"):
                 st_cb = StreamHandler(st.empty())
-                response = qa_chain.run(user_query, callbacks=[st_cb])
+                response = agent.run(user_query, callbacks=[st_cb])
                 st.session_state.messages.append({"role": "assistant", "content": response})
 
 
 if __name__ == "__main__":
-    obj = ChatlasBot()
+    obj = StreamlitApp()
     obj.main()
