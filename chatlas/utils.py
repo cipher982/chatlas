@@ -1,5 +1,17 @@
 import os
+from typing import Any, Dict, List
+
 import streamlit as st
+
+
+def get_nested_value(data: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
+    """Helper function to fetch nested values from a dictionary."""
+    for key in keys:
+        if isinstance(data, dict) and key in data:
+            data = data[key]
+        else:
+            return default
+    return data
 
 
 # decorator
