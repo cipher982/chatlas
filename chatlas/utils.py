@@ -1,13 +1,19 @@
+import logging
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Union
 
 import streamlit as st
 
 
-def get_nested_value(data: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
-    """Helper function to fetch nested values from a dictionary."""
+LOG = logging.getLogger(__name__)
+
+
+def get_nested_value(data: Union[Dict[str, Any], List[Any]], keys: List[Union[str, int]], default: Any = None) -> Any:
+    """Helper function to fetch nested values from a dictionary or list."""
     for key in keys:
         if isinstance(data, dict) and key in data:
+            data = data[key]
+        elif isinstance(data, list) and isinstance(key, int) and 0 <= key < len(data):
             data = data[key]
         else:
             return default
@@ -26,8 +32,9 @@ def enable_chat_history(func):
                 st.cache_resource.clear()
                 del st.session_state["current_page"]
                 del st.session_state["messages"]
-            except:
-                pass
+            except (KeyError, AttributeError) as e:
+                LOG.warning(f"Failed to clear cache or session state: {e}")
+                pass  # Or some recovery action
 
         # to show chat history on ui
         if "messages" not in st.session_state:

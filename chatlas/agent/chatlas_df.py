@@ -19,8 +19,8 @@ def create_chatlas(llm: BaseChatModel, df: pd.DataFrame) -> AgentExecutor:
 
     # Setup input variables for the filling in the prompt
     input_variables = ["input", "agent_scratchpad"]
-    input_variables += ["chat_history"]
-    input_variables += ["df_head"]
+    input_variables += ["chat_history"]  # for using memory
+    input_variables += ["df_head"]  # for adding dataframe sample to the prompt
 
     # Create tools
     tools = [PythonAstREPLTool(locals={"df": df})]
@@ -29,7 +29,7 @@ def create_chatlas(llm: BaseChatModel, df: pd.DataFrame) -> AgentExecutor:
     # Create prompts
     prompt = ZeroShotAgent.create_prompt(tools, prefix=prefix, suffix=suffix, input_variables=input_variables)
     prompt = prompt.partial()
-    prompt = prompt.partial(df_head=str(df.head(number_of_head_rows).to_markdown()))
+    prompt = prompt.partial(df_head=str(df.head(number_of_head_rows).to_markdown()))  # add df sample to the prompt
 
     # Setup memory for contextual conversation
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
@@ -56,6 +56,7 @@ def create_chatlas(llm: BaseChatModel, df: pd.DataFrame) -> AgentExecutor:
         max_iterations=3,
         max_execution_time=None,
         early_stopping_method="force",
+        handle_parsing_errors=True,
     )
 
     return agent_exec

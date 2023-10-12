@@ -21,7 +21,8 @@ st.write(
 class StreamlitApp:
     def __init__(self):
         utils.configure_openai_api_key()
-        self.openai_model = "gpt-3.5-turbo"
+        # self.openai_model = "gpt-3.5-turbo"
+        self.openai_model = "gpt-4"
 
     def save_file(self, file):
         folder = "tmp"
@@ -35,10 +36,17 @@ class StreamlitApp:
 
     @st.spinner("Processing your data...")
     def process_data(self):
-        # Check if processed semantic/activities data has been generated
-        if not semantic.DEFAULT_OUTPUT_PATH.exists():
+        # Check if processed semantic places data has been generated
+        if not semantic.DEFAULT_PLACES_OUTPUT_PATH.exists():
             placeholder = st.empty()
-            placeholder.text("Generating processed data for semantic...")
+            placeholder.text("Generating processed data for semantic places...")
+            semantic.main()
+            placeholder.empty()
+
+        # Check if processed semantic activities data has been generated
+        if not semantic.DEFAULT_ACTIVITIES_OUTPUT_PATH.exists():
+            placeholder = st.empty()
+            placeholder.text("Generating processed data for semantic activities...")
             semantic.main()
             placeholder.empty()
 
@@ -51,8 +59,11 @@ class StreamlitApp:
 
     @st.spinner("Connecting to AI...")
     def setup_agent(self):
+        # Process data
+        self.process_data()
+
         # Load processed location history data
-        df = pd.read_pickle(semantic.DEFAULT_OUTPUT_PATH)
+        df = pd.read_pickle(semantic.DEFAULT_PLACES_OUTPUT_PATH)
 
         # Create llm and agent
         llm = ChatOpenAI(client=None, model=self.openai_model, temperature=0, streaming=True)
