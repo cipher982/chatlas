@@ -161,6 +161,10 @@ def process_places(places: pd.DataFrame) -> pd.DataFrame:
     places["start_time"] = pd.to_datetime(places["start_time"], format="ISO8601")
     places["end_time"] = pd.to_datetime(places["end_time"], format="ISO8601")
 
+    # Extract address components
+    addr_components = places["address"].apply(extract_address_components)
+    places[["addr_name", "street", "city", "state", "country"]] = addr_components
+
     # Convert lat/lon to float
     places["lat"] = (places["lat"] / 1e7).astype("float64")
     places["lon"] = (places["lon"] / 1e7).astype("float64")
@@ -192,54 +196,33 @@ def process_activities(activities: pd.DataFrame) -> pd.DataFrame:
     return activities
 
 
-def old_process_data(data: list) -> pd.DataFrame:
-    LOG.info("Processing data...")
+def extract_address_components(address):
+    components = address.split(",") if address else []
+    street, city, state, country = None, None, None, None
 
-    # Extract segments
-    activity_segments = [i["activitySegment"] for i in data[0]["timelineObjects"] if "activitySegment" in i]
-    df_acts = pd.json_normalize(activity_segments)
-    df_acts["duration.startTimestamp"] = df_acts["duration.startTimestamp"].apply(parse_datetime)
-    df_acts["duration.endTimestamp"] = df_acts["duration.endTimestamp"].apply(parse_datetime)
-    LOG.info(f"Number of activity segments: {len(df_acts)}")
+    if len(components) == 3:
+        street, city, country = components
+        addr_name = "missing"
+        state = "missing"
+    elif len(components) == 4:
+        street, city, state, country = components
+        addr_name = "missing"
+    elif len(components) == 5:
+        addr_name, street, city, state, country = components
 
-    new_rows = []
-    for _, row in df_acts.iterrows():
-        start_time = row["duration.startTimestamp"]
-        end_time = row["duration.endTimestamp"]
-        current_time = start_time
+    else:
+        print(f"Unexpected address format: {address}")
+        addr_name, street, city, state, country = "missing", "missing", "missing", "missing", "missing"
 
-        while current_time < end_time:
-            next_interval_end = current_time + pd.Timedelta(minutes=5)
-            new_row = row.copy()
-            new_row["duration.startTimestamp"] = current_time
-            new_row["duration.endTimestamp"] = min(next_interval_end, end_time)
-            new_rows.append(new_row)
-            current_time = next_interval_end
-
-    granular_df = pd.DataFrame(new_rows)
-
-    # Create interval df
-    start_date = df_acts["duration.startTimestamp"].min().replace(hour=0, minute=0, second=0, microsecond=0)
-    end_date = df_acts["duration.endTimestamp"].max().replace(hour=23, minute=59, second=59, microsecond=0)
-    date_range = pd.date_range(start_date, end_date, freq="5T")
-    all_intervals_df = pd.DataFrame(index=date_range)
-    all_intervals_df = all_intervals_df.reset_index().rename(columns={"index": "interval_start"})
-    LOG.info(f"Number of 5-minute intervals: {len(all_intervals_df)}")
-    LOG.info(f"Minimum date: {start_date}")
-    LOG.info(f"Maximum date: {end_date}")
-
-    # Merge
-    merged_df = pd.merge_asof(
-        all_intervals_df.sort_values(by="interval_start"),
-        granular_df.sort_values(by="duration.startTimestamp"),
-        left_on="interval_start",
-        right_on="duration.startTimestamp",
-        direction="backward",
-        suffixes=("", "_y"),
+    return pd.Series(
+        [
+            addr_name.strip(),
+            street.strip(),
+            city.strip(),
+            state.strip(),
+            country.strip(),
+        ]
     )
-    LOG.info(f"Final processed dataframe shape: {merged_df.shape}")
-
-    return merged_df
 
 
 def save_data(df: pd.DataFrame, output_file: Path) -> None:
