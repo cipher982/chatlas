@@ -22,6 +22,7 @@ PROCESSED_PATH = BASE_PATH / "processed"
 DEFAULT_SEMANTIC_PATH = SEMANTIC_PATH
 DEFAULT_PLACES_OUTPUT_PATH = PROCESSED_PATH / "semantic_places.pkl"
 DEFAULT_ACTIVITIES_OUTPUT_PATH = PROCESSED_PATH / "semantic_activities.pkl"
+SQL_DB_PATH = PROCESSED_PATH / "chatlas.db"
 
 
 def parse_datetime(dt_str: str) -> datetime:
@@ -209,9 +210,8 @@ def extract_address_components(address):
         addr_name = "missing"
     elif len(components) == 5:
         addr_name, street, city, state, country = components
-
     else:
-        print(f"Unexpected address format: {address}")
+        LOG.debug(f"Unexpected address format: {address}")
         addr_name, street, city, state, country = "missing", "missing", "missing", "missing", "missing"
 
     return pd.Series(
@@ -234,13 +234,24 @@ def save_data(df: pd.DataFrame, output_file: Path) -> None:
     LOG.info(f"Saved DataFrame of shape {df.shape} to: {output_file}")
 
 
-def main():
+def main(load_sql: bool = False):
     places, activities = extract_all_semantic(DEFAULT_SEMANTIC_PATH)
     places = process_places(places)
     activities = process_activities(activities)
     save_data(places, DEFAULT_PLACES_OUTPUT_PATH)
     save_data(activities, DEFAULT_ACTIVITIES_OUTPUT_PATH)
 
+    if load_sql:
+        LOG.info("Loading data into sqlite3 database...")
+        import sqlite3
+
+        conn = sqlite3.connect(SQL_DB_PATH)
+        places.to_sql("places", conn, if_exists="replace", index=False)
+        activities.to_sql("activities", conn, if_exists="replace", index=False)
+        conn.close()
+        LOG.info("Done loading data into sqlite3 database.")
+
 
 if __name__ == "__main__":
-    main()
+    logging.basicConfig(level=logging.INFO)
+    main(load_sql=True)

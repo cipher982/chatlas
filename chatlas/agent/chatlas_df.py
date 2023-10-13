@@ -8,12 +8,12 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.memory import ConversationBufferMemory
 from langchain.tools.python.tool import PythonAstREPLTool
 
-from chatlas.prompts.prompts import PREFIX, SUFFIX_WITH_DF
+from chatlas.prompts.prompts_df import PREFIX, SUFFIX
 
 
 def create_chatlas(llm: BaseChatModel, df: pd.DataFrame) -> AgentExecutor:
     prefix = PREFIX
-    suffix = SUFFIX_WITH_DF
+    suffix = SUFFIX
     number_of_head_rows = 5
     callback_manager = None
 
@@ -53,7 +53,7 @@ def create_chatlas(llm: BaseChatModel, df: pd.DataFrame) -> AgentExecutor:
         callback_manager=callback_manager,
         verbose=True,
         return_intermediate_steps=False,
-        max_iterations=3,
+        max_iterations=15,
         max_execution_time=None,
         early_stopping_method="force",
         handle_parsing_errors=True,
