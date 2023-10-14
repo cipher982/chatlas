@@ -2,16 +2,19 @@
 
 from langchain.agents.agent import AgentExecutor
 from langchain.agents.agent_toolkits import SQLDatabaseToolkit
+from langchain.agents.format_scratchpad import format_to_openai_functions
 from langchain.agents.mrkl.base import ZeroShotAgent
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
-from langchain.agents.openai_functions_agent.base import OpenAIFunctionsAgent
+from langchain.agents.output_parsers import OpenAIFunctionsAgentOutputParser
 from langchain.chains.llm import LLMChain
 from langchain.chat_models.base import BaseChatModel
+from langchain.memory import ConversationBufferMemory
 from langchain.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
 from langchain.schema.messages import AIMessage, SystemMessage
+from langchain.tools.render import format_tool_to_openai_function
 from langchain.utilities import SQLDatabase
 
-from chatlas.prompts.prompts_sql import PREFIX, SUFFIX, FUNCS_SUFFIX
+from chatlas.prompts.prompts_sql import FUNCS_SUFFIX, PREFIX, SUFFIX
 
 TOP_K = 5
 INPUT_VARIABLES = None
@@ -23,23 +26,18 @@ EARLY_STOPPING_METHOD = "force"
 
 
 def create_chatlas(llm: BaseChatModel, db: str, functions: bool = False) -> AgentExecutor:
-    # prefix = PREFIX
-    # suffix = SUFFIX_WITH_DF
-    # number_of_head_rows = 5
-    # callback_manager = None
-
-    # Setup memory for contextual conversation
-    # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-
-    # Set DB engine
+    # Set db connection
     db_engine = SQLDatabase.from_uri(db)
 
-    # Create toolkit
+    # Gather tools
     toolkit = SQLDatabaseToolkit(db=db_engine, llm=llm)
     tools = toolkit.get_tools()
 
     # Set prompts
     prefix = PREFIX.format(dialect=toolkit.dialect, top_k=TOP_K)
+
+    # Setup memory for contextual conversation
+    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
     if not functions:
         prompt = ZeroShotAgent.create_prompt(
@@ -59,28 +57,26 @@ def create_chatlas(llm: BaseChatModel, db: str, functions: bool = False) -> Agen
     else:
         messages = [
             SystemMessage(content=prefix),
+            MessagesPlaceholder(variable_name="chat_history"),
             HumanMessagePromptTemplate.from_template("{input}"),
             AIMessage(content=FUNCS_SUFFIX),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
-        input_variables = ["input", "agent_scratchpad"]
-        _prompt = ChatPromptTemplate(input_variables=input_variables, messages=messages)
+        input_variables = ["input", "agent_scratchpad", "chat_history"]
+        prompt = ChatPromptTemplate(input_variables=input_variables, messages=messages)
 
-        # llm_with_tools = llm.bind(functions=[format_tool_to_openai_function(t) for t in tools])
+        llm_with_tools = llm.bind(functions=[format_tool_to_openai_function(t) for t in tools])
 
-        agent = OpenAIFunctionsAgent(
-            llm=llm,
-            prompt=_prompt,
-            tools=tools,
-            callback_manager=CALLBACK_MANAGER,
+        # Define this funky runnable agent
+        agent = (
+            {
+                "chat_history": lambda x: x["chat_history"],  # keep this first, order matters!
+                "input": lambda x: x["input"],
+                "agent_scratchpad": lambda x: format_to_openai_functions(x["intermediate_steps"]),
+            }
+            | prompt
+            | llm_with_tools
+            | OpenAIFunctionsAgentOutputParser()
         )
 
-    return AgentExecutor.from_agent_and_tools(
-        agent=agent,
-        tools=tools,
-        callback_manager=CALLBACK_MANAGER,
-        verbose=VERBOSE,
-        max_iterations=MAX_ITERATIONS,
-        max_execution_time=MAX_EXECUTION_TIME,
-        early_stopping_method=EARLY_STOPPING_METHOD,
-    )
+    return AgentExecutor(agent=agent, tools=tools, memory=memory, verbose=True)

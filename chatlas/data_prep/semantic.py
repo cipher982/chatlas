@@ -194,6 +194,13 @@ def process_activities(activities: pd.DataFrame) -> pd.DataFrame:
     # Convert confidence to int
     activities["confidence"] = activities["confidence"].round().astype("Int64")
 
+    # Drop rows without location data
+    loc_cols = ["startLocation_lat", "startLocation_lon", "endLocation_lat", "endLocation_lon"]
+    activities = activities.dropna(subset=loc_cols)
+
+    # Drop rows without activity type
+    activities = activities.dropna(subset=["activity_type"])
+
     return activities
 
 
