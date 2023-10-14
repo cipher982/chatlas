@@ -15,7 +15,7 @@ LOG = logging.getLogger(__name__)
 BASE_PATH = Path("./data/sample")
 
 # Sub-paths
-SEMANTIC_PATH = BASE_PATH / "location_history/semantic"
+SEMANTIC_PATH = BASE_PATH / "location_history/semantic/"
 PROCESSED_PATH = BASE_PATH / "processed"
 
 # Constants
@@ -204,7 +204,7 @@ def process_activities(activities: pd.DataFrame) -> pd.DataFrame:
     return activities
 
 
-def extract_address_components(address):
+def extract_address_components(address: str) -> pd.Series:
     components = address.split(",") if address else []
     street, city, state, country = None, None, None, None
 
@@ -241,7 +241,7 @@ def save_data(df: pd.DataFrame, output_file: Path) -> None:
     LOG.info(f"Saved DataFrame of shape {df.shape} to: {output_file}")
 
 
-def main(load_sql: bool = False):
+def main(load_sql: bool = False) -> None:
     places, activities = extract_all_semantic(DEFAULT_SEMANTIC_PATH)
     places = process_places(places)
     activities = process_activities(activities)
