@@ -13,5 +13,6 @@ setup(
         "datetime",
         "openai",
         "tabulate",
+        "streamlit",
     ],
 )
