@@ -6,7 +6,7 @@ from langchain.chat_models import ChatOpenAI
 from streaming import StreamHandler
 
 from chatlas import utils
-from chatlas.agent.chatlas_df import create_chatlas
+from chatlas.agent.chatlas_sql import create_chatlas
 from chatlas.data_prep import records, semantic
 
 
@@ -47,7 +47,7 @@ class StreamlitApp:
         if not semantic.DEFAULT_ACTIVITIES_OUTPUT_PATH.exists():
             placeholder = st.empty()
             placeholder.text("Generating processed data for semantic activities...")
-            semantic.main()
+            semantic.main(load_sql=True)
             placeholder.empty()
 
         # Check if processed granular records data has been generated
@@ -62,28 +62,27 @@ class StreamlitApp:
         # Process data
         self.process_data()
 
-        # Load processed location history data
-        df = pd.read_pickle(semantic.DEFAULT_PLACES_OUTPUT_PATH)
-
-        # Create llm and agent
-        llm = ChatOpenAI(client=None, model=self.openai_model, temperature=0, streaming=True)
-        agent = create_chatlas(llm=llm, df=df)
-
+        db_path = f"sqlite:///{semantic.SQL_DB_PATH}"
+        model = "gpt-3.5-turbo-0613"
+        # model = "gpt-4"
+        llm = ChatOpenAI(client=None, model=model, temperature=0, streaming=True)
+        agent = create_chatlas(llm=llm, db=db_path, functions=True)
         return agent
 
     @utils.enable_chat_history
     def main(self):
+        if "agent" not in st.session_state:
+            st.session_state.agent = self.setup_agent()
+
         user_query = st.chat_input(placeholder="Ask me about your travel history!")
 
         if user_query:
-            agent = self.setup_agent()
-
             utils.display_msg(user_query, "user")
 
             with st.chat_message("assistant"):
-                st_cb = StreamHandler(st.empty())
-                response = agent.run(user_query, callbacks=[st_cb])
-                st.session_state.messages.append({"role": "assistant", "content": response})
+                response = st.session_state.agent.invoke({"input": user_query})
+                st.session_state.messages.append({"role": "assistant", "content": response["output"]})
+                st.experimental_rerun()
 
 
 if __name__ == "__main__":
