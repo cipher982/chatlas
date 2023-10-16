@@ -1,14 +1,11 @@
 import os
 
-import pandas as pd
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
-from streaming import StreamHandler
 
 from chatlas import utils
 from chatlas.agent.chatlas_sql import create_chatlas
 from chatlas.data_prep import records, semantic
-
 
 st.set_page_config(page_title="Chatlas", page_icon="🌎")
 st.header("Chat over your location history")
