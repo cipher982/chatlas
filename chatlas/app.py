@@ -1,5 +1,3 @@
-import os
-
 import streamlit as st
 from langchain.chat_models import ChatOpenAI
 
@@ -20,16 +18,6 @@ class StreamlitApp:
         utils.configure_openai_api_key()
         # self.openai_model = "gpt-3.5-turbo"
         self.openai_model = "gpt-4"
-
-    def save_file(self, file):
-        folder = "tmp"
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-        file_path = f"./{folder}/{file.name}"
-        with open(file_path, "wb") as f:
-            f.write(file.getvalue())
-        return file_path
 
     @st.spinner("Processing your data...")
     def process_data(self):
@@ -79,7 +67,7 @@ class StreamlitApp:
             with st.chat_message("assistant"):
                 response = st.session_state.agent.invoke({"input": user_query})
                 st.session_state.messages.append({"role": "assistant", "content": response["output"]})
-                st.experimental_rerun()
+                st.rerun()
 
 
 if __name__ == "__main__":

@@ -2,9 +2,10 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import pandas as pd
+import sqlite3
 
 from chatlas.utils import get_nested_value
 
@@ -232,7 +233,7 @@ def extract_address_components(address: str) -> pd.Series:
     )
 
 
-def save_data(df: pd.DataFrame, output_file: Path) -> None:
+def write_to_df(df: pd.DataFrame, output_file: Path) -> None:
     """Save DataFrame to a pickle file."""
     LOG.info("Saving processed data...")
     output_dir = output_file.parent
@@ -241,21 +242,38 @@ def save_data(df: pd.DataFrame, output_file: Path) -> None:
     LOG.info(f"Saved DataFrame of shape {df.shape} to: {output_file}")
 
 
-def main(load_sql: bool = False) -> None:
+def write_to_sql(df: pd.DataFrame, table_name: str, conn: sqlite3.Connection, if_exists: str = "replace") -> None:
+    """Write a DataFrame to a SQL database.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame to write.
+        table_name (str): The name of the table.
+        conn (sqlite3.Connection): The SQLite connection object.
+        if_exists (str): What to do if the table already exists. Defaults to 'replace'.
+    """
+    df.to_sql(table_name, conn, if_exists=if_exists, index=False)
+
+
+def main(
+    write_df: bool = True,
+    write_sql: bool = True,
+    places_output_path: Path = DEFAULT_PLACES_OUTPUT_PATH,
+    activities_output_path: Path = DEFAULT_ACTIVITIES_OUTPUT_PATH,
+    sql_db_path: Path = SQL_DB_PATH,
+) -> None:
     places, activities = extract_all_semantic(DEFAULT_SEMANTIC_PATH)
     places = process_places(places)
     activities = process_activities(activities)
-    save_data(places, DEFAULT_PLACES_OUTPUT_PATH)
-    save_data(activities, DEFAULT_ACTIVITIES_OUTPUT_PATH)
 
-    if load_sql:
+    if write_df:
+        write_to_df(places, places_output_path)
+        write_to_df(activities, activities_output_path)
+
+    if write_sql:
         LOG.info("Loading data into sqlite3 database...")
-        import sqlite3
-
-        conn = sqlite3.connect(SQL_DB_PATH)
-        places.to_sql("places", conn, if_exists="replace", index=False)
-        activities.to_sql("activities", conn, if_exists="replace", index=False)
-        conn.close()
+        with sqlite3.connect(sql_db_path) as conn:
+            write_to_sql(places, "places", conn)
+            write_to_sql(activities, "activities", conn)
         LOG.info("Done loading data into sqlite3 database.")
 
 
