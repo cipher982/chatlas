@@ -1,2 +1,25 @@
 [tool.black]
 line-length = 120
+
+[tool.poetry]
+name = "chatlas"
+version = "0.1.0"
+description = ""
+authors = ["David Rose <david010@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+requests = "^2.31.0"
+pandas = "^2.2.0"
+numpy = "^1.26.3"
+langchain = "^0.1.4"
+datetime = "^5.4"
+openai = "^1.10.0"
+tabulate = "^0.9.0"
+streamlit = "^1.30.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
