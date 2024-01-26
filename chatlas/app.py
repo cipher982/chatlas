@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain.chat_models import ChatOpenAI
+from langchain_openai import ChatOpenAI
 
 from chatlas import utils
 from chatlas.agent.chatlas_sql import create_chatlas

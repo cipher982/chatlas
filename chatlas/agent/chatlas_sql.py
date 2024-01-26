@@ -1,7 +1,6 @@
 """Chatlas Agent for workin with SQL."""
 
 from langchain.agents.agent import AgentExecutor
-from langchain.agents.agent_toolkits import SQLDatabaseToolkit
 from langchain.agents.format_scratchpad import format_to_openai_functions
 from langchain.agents.mrkl.base import ZeroShotAgent
 from langchain.agents.mrkl.prompt import FORMAT_INSTRUCTIONS
@@ -11,8 +10,10 @@ from langchain.chat_models.base import BaseChatModel
 from langchain.memory import ConversationBufferMemory
 from langchain.prompts.chat import ChatPromptTemplate, HumanMessagePromptTemplate, MessagesPlaceholder
 from langchain.schema.messages import AIMessage, SystemMessage
-from langchain.tools.render import format_tool_to_openai_function
-from langchain.utilities import SQLDatabase
+from langchain_core.utils.function_calling import convert_to_openai_function
+from langchain_community.utilities import SQLDatabase
+from langchain_community.agent_toolkits import SQLDatabaseToolkit
+
 
 from chatlas.prompts.prompts_sql import FUNCS_SUFFIX, PREFIX, SUFFIX
 
@@ -65,7 +66,7 @@ def create_chatlas(llm: BaseChatModel, db: str, functions: bool = False) -> Agen
         input_variables = ["input", "agent_scratchpad", "chat_history"]
         prompt = ChatPromptTemplate(input_variables=input_variables, messages=messages)
 
-        llm_with_tools = llm.bind(functions=[format_tool_to_openai_function(t) for t in tools])
+        llm_with_tools = llm.bind(functions=[convert_to_openai_function(t) for t in tools])
 
         # Define this funky runnable agent
         agent = (
