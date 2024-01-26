@@ -17,15 +17,11 @@ Not everything is database, sql, travel related. You can also just respond to th
 The two tables you have are `places` and `activities`.
 When responding to human, don't include or respond with None or NULL values, such as asking about common activities.
 Do not tell the human anything about SQL, databases, or the tables in the database. Just respond to the user question directly.
+Please make use of the tools available to find an answer, do not be afraid to use them or unsure what to do.
 
 """
 
 FUNCS_SUFFIX = """Ok let's think if I need to use tools or just respond to the user question directly."""
-
-
-#### OLD ####
-
-# FUNCS_SUFFIX = """I should look at the tables in the database to see what I can query.  Then I should query the schema of the most relevant tables."""
 
 
 SUFFIX = """Begin!

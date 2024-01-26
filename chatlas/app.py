@@ -48,7 +48,7 @@ class StreamlitApp:
         self.process_data()
 
         db_path = f"sqlite:///{semantic.SQL_DB_PATH}"
-        model = "gpt-3.5-turbo-0613"
+        model = "gpt-3.5-turbo-1106"
         # model = "gpt-4"
         llm = ChatOpenAI(client=None, model=model, temperature=0, streaming=True)
         agent = create_chatlas(llm=llm, db=db_path, functions=True)
