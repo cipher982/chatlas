@@ -5,12 +5,11 @@ from typing import Sequence
 from typing import TypedDict
 
 from langchain.chat_models.base import BaseChatModel
-from langchain.tools.render import format_tool_to_openai_function
 from langchain_community.agent_toolkits import SQLDatabaseToolkit
 from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import FunctionMessage
-from langchain_core.messages import HumanMessage
+from langchain_core.utils.function_calling import convert_to_openai_function
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END
 from langgraph.graph import StateGraph
@@ -28,15 +27,17 @@ def create_graph_agent(llm: BaseChatModel, db_uri: str):
     toolkit = SQLDatabaseToolkit(db=db_engine, llm=llm)
     tools = toolkit.get_tools()
     tool_executor = ToolExecutor(tools)
+
     # Set up the model
     model = ChatOpenAI(temperature=0, streaming=True)
-    functions = [format_tool_to_openai_function(t) for t in tools]
+    functions = [convert_to_openai_function(t) for t in tools]
     model = model.bind_functions(functions)
 
     def call_model(state, model=model):
         messages = state["messages"]
         response = model.invoke(messages)
-        return {"messages": [response]}
+        # Append the new response to the existing messages instead of replacing them
+        return {"messages": messages + [response]}
 
     def call_tool(state, tool_executor=tool_executor):
         messages = state["messages"]
@@ -47,7 +48,8 @@ def create_graph_agent(llm: BaseChatModel, db_uri: str):
         )
         response = tool_executor.invoke(action)
         function_message = FunctionMessage(content=str(response), name=action.tool)
-        return {"messages": [function_message]}
+        # Append the new function message to the existing messages instead of replacing them
+        return {"messages": messages + [function_message]}
 
     def should_continue(state):
         messages = state["messages"]
@@ -59,8 +61,8 @@ def create_graph_agent(llm: BaseChatModel, db_uri: str):
 
     # Define the graph
     workflow = StateGraph(AgentState)
-    workflow.add_node("agent", call_model)  # Now uses closure
-    workflow.add_node("action", call_tool)  # Now uses closure
+    workflow.add_node("agent", call_model)
+    workflow.add_node("action", call_tool)
     workflow.set_entry_point("agent")
     workflow.add_conditional_edges("agent", should_continue, {"continue": "action", "end": END})
     workflow.add_edge("action", "agent")
@@ -68,6 +70,4 @@ def create_graph_agent(llm: BaseChatModel, db_uri: str):
     # Compile the graph
     app = workflow.compile()
 
-    # Use it
-    inputs = {"messages": [HumanMessage(content="Your initial message")]}
-    app.invoke(inputs)
+    return app
