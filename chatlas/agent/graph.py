@@ -10,7 +10,6 @@ from langchain_community.utilities import SQLDatabase
 from langchain_core.messages import BaseMessage
 from langchain_core.messages import FunctionMessage
 from langchain_core.utils.function_calling import convert_to_openai_function
-from langchain_openai import ChatOpenAI
 from langgraph.graph import END
 from langgraph.graph import StateGraph
 from langgraph.prebuilt import ToolExecutor
@@ -29,14 +28,13 @@ def create_graph_agent(llm: BaseChatModel, db_uri: str):
     tool_executor = ToolExecutor(tools)
 
     # Set up the model
-    model = ChatOpenAI(temperature=0, streaming=True)
     functions = [convert_to_openai_function(t) for t in tools]
-    model = model.bind_functions(functions)
+    model = llm.bind_functions(functions)
 
     def call_model(state, model=model):
         messages = state["messages"]
         response = model.invoke(messages)
-        # Append the new response to the existing messages instead of replacing them
+        # bit of a hack to try and improve memory
         return {"messages": messages + [response]}
 
     def call_tool(state, tool_executor=tool_executor):
@@ -48,7 +46,7 @@ def create_graph_agent(llm: BaseChatModel, db_uri: str):
         )
         response = tool_executor.invoke(action)
         function_message = FunctionMessage(content=str(response), name=action.tool)
-        # Append the new function message to the existing messages instead of replacing them
+        # bit of a hack to try and improve memory
         return {"messages": messages + [function_message]}
 
     def should_continue(state):
